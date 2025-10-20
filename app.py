@@ -82,7 +82,7 @@ st.write("Silakan masukkan keluhan atau gejala yang dialami pasien dalam bentuk 
 with st.form("gejala_form"):
     st.header("Masukkan Keluhan Pasien")
     user_input_text = st.text_area(
-        label="Contoh: 'pasien mengeluh pusing dan mual sejak kemarin, disertai demam ringan'",
+        label="Contoh: 'pasien mengeluh kepala pusing, hidung pilek, batuk, perut kembung dan rasa mual'", 
         height=100
     )
     submit_button = st.form_submit_button(label="🚀 Prediksi Diagnosis")
