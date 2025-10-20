@@ -57,29 +57,23 @@ def extract_symptoms_from_text(text, dictionary):
 # --- FUNGSI UNTUK MEMUAT MODEL ---
 @st.cache_resource
 def load_model():
-    """Memuat model machine learning dari file joblib."""
     model = joblib.load('random_forest_model.joblib')
     return model
 
 @st.cache_data
 def load_columns():
-    """Memuat daftar kolom yang digunakan oleh model dari file json."""
     with open('model_columns.json', 'r') as f:
         columns = json.load(f)
     return columns
 
-# Muat semua aset saat aplikasi dimulai
+# Muat model, kolom, dan kamus gejala
 try:
     model = load_model()
     model_columns = load_columns()
     symptom_dictionary = load_symptom_dictionary()
-except FileNotFoundError as e:
-    st.error(f"File penting tidak ditemukan: {e}. Pastikan 'random_forest_model.joblib', 'model_columns.json', dan 'KANDIDAT_GEJALA_UNTUK_DIKURASI.xlsx' ada di direktori yang sama.")
+except FileNotFoundError:
+    st.error("File model atau kolom tidak ditemukan. Pastikan 'random_forest_model.joblib' dan 'model_columns.json' ada di direktori yang sama.")
     st.stop()
-except Exception as e:
-    st.error(f"Terjadi kesalahan saat memuat aset awal: {e}")
-    st.stop()
-
 
 # --- ANTARMUKA PENGGUNA (UI) ---
 st.title("🩺 Sistem Prediksi Diagnosis Penyakit")
@@ -98,7 +92,7 @@ if submit_button:
     if not user_input_text.strip():
         st.warning("Mohon masukkan teks keluhan pasien terlebih dahulu.")
     elif symptom_dictionary is None:
-        # Pesan error spesifik sudah ditampilkan saat load, jadi cukup pass
+        # Pesan error sudah ditampilkan di dalam fungsi load
         pass
     else:
         # --- FASE 1: Proses Data di Belakang Layar ---
@@ -107,11 +101,11 @@ if submit_button:
         prediksi_proba = None
         
         if gejala_terdeteksi:
-            # Siapkan DataFrame input sesuai dengan kolom yang diharapkan model
-            input_df = pd.DataFrame(0, index=[0], columns=model_columns)
+            input_data = {col: [0] for col in model_columns}
             for gejala in gejala_terdeteksi:
-                if gejala in input_df.columns:
-                    input_df[gejala] = 1
+                if gejala in input_data:
+                    input_data[gejala] = [1]
+            input_df = pd.DataFrame(input_data)[model_columns]
             
             try:
                 prediksi = model.predict(input_df)
@@ -137,14 +131,29 @@ if submit_button:
         with col2:
             st.subheader("📈 Hasil Prediksi Diagnosis")
             if prediksi is not None and prediksi_proba is not None:
-                # Kolom target diagnosis (sesuaikan jika perlu)
                 target_cols = ['DIAGNOSA_J', 'DIAGNOSA_R', 'DIAGNOSA_I', 'DIAGNOSA_K', 'DIAGNOSA_LAINNYA']
+                
+                # [PERUBAHAN] Kamus untuk deskripsi diagnosis
+                diagnosis_descriptions = {
+                    'DIAGNOSA_J': "Diagnosis terkait sistem pernapasan.",
+                    'DIAGNOSA_R': "Diagnosis terkait gejala tidak spesifik atau umum.",
+                    'DIAGNOSA_I': "Diagnosis terkait sistem peredaran darah.",
+                    'DIAGNOSA_K': "Diagnosis terkait sistem pencernaan.",
+                    'DIAGNOSA_LAINNYA': "Diagnosis lain di luar kategori J, R, I, K."
+                }
+                
                 ada_prediksi = False
 
                 for i, target in enumerate(target_cols):
                     if prediksi[0][i] == 1:
                         probabilitas = prediksi_proba[i][0, 1]
+                        deskripsi = diagnosis_descriptions.get(target, "Deskripsi tidak tersedia.")
+                        
                         st.success(f"**{target.replace('_', ' ').title()}**")
+                        
+                        # [PERUBAHAN] Menambahkan deskripsi
+                        st.caption(deskripsi) 
+                        
                         st.metric(label="Tingkat Keyakinan", value=f"{probabilitas:.1%}")
                         st.write("") 
                         ada_prediksi = True
