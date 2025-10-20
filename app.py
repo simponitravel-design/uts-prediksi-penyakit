@@ -76,7 +76,7 @@ except FileNotFoundError:
     st.stop()
 
 # --- ANTARMUKA PENGGUNA (UI) ---
-st.title("🩺 Sistem Prediksi Diagnosis Penyakit")
+st.title("🩺 Sistem Prediksi Diagnosis Penyakit..")
 st.write("Silakan masukkan keluhan atau gejala yang dialami pasien dalam bentuk kalimat, lalu tekan tombol 'Prediksi Diagnosis'.")
 
 with st.form("gejala_form"):
